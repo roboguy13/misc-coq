@@ -1,6 +1,7 @@
 Require Import Lia.
 Require Import Coq.Program.Equality.
 Require Import Coq.Arith.Wf_nat.
+Require Import Coq.Arith.Compare_dec.
 
 Inductive Parity := Even | Odd.
 
@@ -23,34 +24,59 @@ Definition Gcd a b x :=
   ((a > 0) * (b > 0) * Gcd' a b x)%type.
 
 Ltac solve_Gcd :=
-  let prf1 := fresh "prf1"
-  in
-  let prf2 := fresh "prf2"
-  in
-  unfold Gcd; split; try split; try lia;
+  unfold Gcd; split; [> split | idtac]; try lia;
   repeat (((apply Gcd_lt; [> lia | idtac]; simpl) || (apply Gcd_gt; [> lia | idtac]; simpl)));
   apply Gcd_refl.
+
+(*
+Ltac solve_notGcd :=
+  let H := fresh "H"
+  in
+  let G := fresh "G"
+  in
+  intro H; destruct H as (_ & G); inversion G; subst; lia.
+*)
+
+Ltac solve_notGcd :=
+  let H := fresh "H"
+  in
+  let H' := fresh "H'"
+  in
+  let H'' := fresh "H''"
+  in
+  intro H; destruct H as (_&H');
+  repeat (inversion H' as [ | ? ? ? ? H'' | ? ? ? ? H'' ]; subst; try lia; clear H'; rename H'' into H').
+
 
 Example Gcd_ex1 : Gcd 8 12 4.
 Proof. solve_Gcd. Defined.
 
-Lemma Gcd_pos : forall x y z,
+Lemma Gcd'_sym : forall {x y z},
+  Gcd' x y z -> Gcd' y x z.
+Proof.
+  intros.
+  induction H; try (now constructor || easy).
+Defined.
+
+Lemma Gcd_sym : forall {x y z},
+  Gcd x y z -> Gcd y x z.
+Proof.
+  intros.
+  destruct H. destruct p.
+  split; try split; try lia.
+
+  apply Gcd'_sym. assumption.
+Defined.
+
+Lemma Gcd_pos : forall {x y z},
   Gcd x y z -> z > 0.
 Proof.
-  induction x using (well_founded_induction lt_wf).
-  intros. destruct x.
-  destruct H0. destruct p. lia.
-
-  inversion H0; subst. destruct H1.
-  l
-
-
-  induction x; intros.
-  destruct H. destruct p. lia.
-  destruct H. inversion g; subst.
-  lia.
-  destruct p. inversion H0; subst; try lia.
-  apply (IHx y).
+  intros.
+  destruct H. intuition.
+  induction g; try easy.
+  apply IHg; lia.
+  apply IHg; lia.
+Defined.
 
 Theorem Gcd_is_fn : forall x y z z',
   x > 0 -> y > 0 ->
@@ -58,29 +84,20 @@ Theorem Gcd_is_fn : forall x y z z',
   Gcd x y z' ->
   z = z'.
 Proof.
-  destruct z. intros.
+  intros.
+  destruct H1, H2. intuition.
+  dependent induction g0; intros.
+  inversion g; subst. reflexivity. lia. lia.
+  apply IHg0; try lia.
+  destruct g; try lia. assumption.
 
-
-  induction z using (well_founded_induction lt_wf); intros.
-
-  destruct z. destruct z'. easy.
-  pose (P := H _ _ _ H0 H1 H2 H3).
-
-
-  induction z; intros.
-  destruct (H2 H H0).
-  pose (P := H1 H H). inversion P; subst; try lia.
-  pose (P := H1 H H0). inversion P; subst; try lia.
-  destruct x. easy.
-  inversion g0. subst.
-  replace (a - (a - b)) with b in H8 by lia. subst.
-  inversion H4; subst; try lia.
-  destruct g0; try lia.
-
+  apply IHg0; try lia.
+  destruct g; try lia. assumption.
+Defined.
 
 
 Inductive Totient' : nat -> nat -> nat -> Type :=
-| Totient'_One : Totient' 1 1 1
+| Totient'_One : forall x, Totient' 1 x 1
 | Totient'_Gcd1 : forall d n t,
     Gcd (S d) n 1 -> Totient' d n t -> Totient' (S d) n (S t)
 | Totient'_NotGcd1 : forall d n t,
@@ -89,11 +106,29 @@ Inductive Totient' : nat -> nat -> nat -> Type :=
 Definition Totient n t := Totient' n n t.
 
 
+Ltac solveTotient :=
+  repeat
+    (((apply Totient'_One)
+      ||
+     (apply Totient'_NotGcd1; [> solve_notGcd | solveTotient])
+      ||
+     (apply Totient'_Gcd1; [> solve_Gcd | solveTotient]))).
+
+
 Example Totient_9 : Totient 9 6.
-Proof.
-  apply Totient'_NotGcd1. intro.
-  apply Totient'_Gcd1. solve_Gcd.
-  apply Totient 
+Proof. solveTotient.
+(* solveTotient. *)
+  apply Totient'_NotGcd1; [> solve_notGcd | idtac].
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+  apply Totient'_NotGcd1; [> solve_notGcd | idtac].
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+  apply Totient'_NotGcd1; [> solve_notGcd | idtac].
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+  apply Totient'_One.
+  apply Totient'_Gcd1; [> solve_Gcd | idtac].
+
 Defined.
 
 
