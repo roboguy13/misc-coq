@@ -177,11 +177,37 @@ Defined.
 Lemma Totient_unique : forall s s' x y z,
   Totient' (S s) x y -> Totient' (S s') x z -> z = y.
 Proof.
-  dependent induction s using (well_founded_induction lt_wf); intros.
+  intros s s'.
+
+  destruct (lt_dec s s').
+  generalize dependent s.
+  generalize dependent s'.
+
+  dependent induction s' using (well_founded_induction lt_wf); intros.
+
+
+  pose (P := H s).
+
+
+
+  induction H0. inversion H1; subst; try easy.
+  subst.
+
+  dependent induction s'.
+
+  destruct H0. destruct H1; try easy.
+
   destruct s.
+  dependent induction s'. inversion H0; subst. inversion H1; subst; try easy. inversion H4. inversion H4.
+  inversion H1; subst.
+  pose (P := IHs' _ _ _ H0 H4).
+
   inversion H1; subst. inversion H0; subst; try easy.
 
   inversion H0; subst; try easy.
+  inversion H4; subst.
+  destruct H1; try easy.
+  destruct t. reflexivity. inversion 
 
 
   pose (P := H _ _ _ _ _ _ H0 H1).
