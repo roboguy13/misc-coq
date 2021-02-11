@@ -1,4 +1,6 @@
 Require Import Lia.
+Require Import Coq.Program.Equality.
+Require Import Coq.Arith.Wf_nat.
 
 Definition optionS (n : option nat) : option nat :=
   match n with
@@ -39,7 +41,7 @@ Proof. lia. Defined.
 Inductive Eval : forall x y, (y <= x) -> Env x -> SatProp y -> bool -> Prop :=
 | Eval_Lit : forall x prf e b, Eval x 0 prf e (SatProp_Lit b) b
 
-| Eval_Var : forall x y prf1 prf2 e b, Lookup x _ prf1 e b -> Eval (S x) (S y) prf2 e (SatProp_Var y) b
+| Eval_Var : forall x y prf1 prf2 e b, Lookup x (S y) prf1 e b -> Eval x (S y) prf2 e (SatProp_Var y) b
 
 | Eval_And : forall x y1 y2 prf1 prf2 e b1 b2 p q,
     Eval x y1 prf1 e p b1 ->
@@ -54,6 +56,21 @@ Inductive Eval : forall x y, (y <= x) -> Env x -> SatProp y -> bool -> Prop :=
 | Eval_Not : forall x y prf e b p,
     Eval x y prf e p b ->
     Eval x y prf e (SatProp_Not _ p) (negb b).
+
+
+Lemma Eval_Var_lookup : forall x y prf1 prf2 e b,
+  Lookup x (S y) prf1 e b ->
+  Eval x (S y) prf2 e (SatProp_Var y) b.
+Proof.
+  intros.
+  apply (Eval_Var _ _ prf1). assumption.
+Qed.
+
+Lemma lookup_Eval_Var : forall x y prf e b,
+  Eval x (S y) prf e (SatProp_Var y) b ->
+  Lookup x (S y) prf e b.
+Proof.
+  intros. inversion H; subst. inversion H3; subst.
 
 Theorem Lookup_exists : forall x y e prf, {b & Lookup x y prf e b}.
 Proof.
